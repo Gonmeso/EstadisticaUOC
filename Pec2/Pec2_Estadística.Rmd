@@ -1,0 +1,217 @@
+---
+title: "Actividad 2: nálisis descriptivo e inferencial"
+author: "Gonzalo Mellizo-Soto Díaz"
+output: html_notebook
+---
+
+```{r}
+library(ggplot2)
+```
+
+
+# 1. Carga de los datos
+
+**Cargar el archivo de datos “Fumadores_clean_5Y.csv” y validar que los tipos de datos se interpretan correctamente.**
+
+Cargamos los datos iniciales y comprobamos los tipos
+
+```{r}
+fumadoresClean <- read.csv('Fumadores_clean_5Y.csv')
+head(fumadoresClean)
+```
+
+```{r}
+str(fumadoresClean)
+```
+
+Vemos como los datos se cargan correctamente y los factores son expresados como tal (se podría mantener el ordinal realizado en la práctica anterior) y como las variable numéricas se convierten bien a integer o double según la necesidad.
+
+# 2. Estadística descriptiva
+
+**En primer lugar, estudiaremos los valores centrales y de dispersión de algunas variables del conjunto de datos. Siga los pasos que se especifican a continuación**
+
+## 2.1 Valores centrales
+
+**Media, mediana y los cinco números (de Tukey) de la capacidad pulmonar.**
+
+```{r}
+print(paste("La media de la capacidad pulmonar es: ",
+            mean(fumadoresClean$PC)))
+print(paste("La mediana de la capacidad pulmonar es: ",
+            median(fumadoresClean$PC)))
+print("El resumen de los cinco números es: ")
+summary(fumadoresClean$PC)
+```
+
+El punto medio sería la media entre el punto 150 y 151 del vector (ordenado), en este caso coincidiendo con la mediana. El summary también muestra la media por lo que se podría realizar en un simple comando.
+
+
+**Visualizar la muestra de valores en un diagrama de caja (boxplot)**
+
+Para la visualización utilizaremos ggplot2
+
+```{r fig.height=6, fig.width=4}
+ggplot(data = fumadoresClean, aes(x = 'PC', y = PC))+
+  geom_boxplot()+
+  theme_bw()
+```
+
+
+**¿Se detectan valores extremos (outliers) en el diagrama?**
+
+Si, se detecta un valor atípico, el valor mínimo de 1.557.
+
+** A continuación, mostrar mediante diagramas de caja la capacidad pulmonar separando el género femenino y el masculino**
+
+```{r}
+ggplot(fumadoresClean, aes(x = Sex, y = PC, fill = Sex))+
+  geom_boxplot()+
+  theme_bw()
+```
+
+
+Se puede apreciar como la capacidad pulmonar es mayor y ligeramente menos dispersa para el género masculino.
+
+**Mostrar, finalmente, mediante diagramas de caja la comparación entre el valor de PC original y al cabo de 5 años. Interpretar los resultados.**
+
+```{r}
+ggplot(data = fumadoresClean) + 
+  geom_boxplot(aes(x = 'PC', y = PC, fill = "PC"))+
+  geom_boxplot(aes(x = "PC5Y", y = PC5Y, fill = "PC5Y"))+
+  theme_bw()
+```
+
+
+Según la distribución de las cajas, podemos concluir con que a los 5 años se muestran valores más dispersos, por ejemplo, el valor atípico tras los cinco años deja de serlo.
+
+La mediana se mantiene estable (ligeramente más baja), mientras que los valores entre el primer cuartil y la mediana son más dispersos que en la toma inicial.
+
+
+## 2.2 Dispersión
+
+**Calcular la dispersión de la capacidad pulmonar usando las medidas: varianza, desviación típica y rango intercuartílico.**
+
+Las medidas de dispersión son las siguientes:
+
+```{r}
+print(paste("La varianza es:",  var(fumadoresClean$PC)))
+print(paste("La desviación típica es:", sd(fumadoresClean$PC)))
+print(paste("El rango intercuartílico es:", IQR(fumadoresClean$PC)))
+
+```
+
+
+## 2.3 Cálculo manual de la dispersión
+
+**Calcular la desviación típica de la capacidad pulmonar manualmente y comparar el resultado con la función correspondiente de R.**
+
+Implementamos manualmente la función:
+
+```{r}
+sqrt(sum((fumadoresClean$PC - mean(fumadoresClean$PC))^2)/ (length(fumadoresClean$PC)))
+```
+ Existe una diferencia y es que la función de R utiliza la varianza muestral, N-1 en lugar de N:
+ 
+```{r}
+sqrt(sum((fumadoresClean$PC - mean(fumadoresClean$PC))^2)/ (length(fumadoresClean$PC) - 1))
+```
+ 
+## 2.4 Histograma
+ 
+**Representar un histograma de la variable PC. Si es necesario, configura los parámetros del histograma para que se vea con una buena precisión.** 
+
+```{r}
+ggplot(fumadoresClean, aes(x=PC))+
+  geom_histogram(bins = 35)+
+  theme_bw()
+```
+
+Este gráfico nos ayuda a comprender la distribución de los datos, en este caso se observa claramente como la mayoría de datos se encuentran comprendidos entre los valores 3 y 4.
+
+
+## 2.5 Datos categóricos
+
+**En las variables Sex, Sport y City, realizar un resumen numérico y dibujar un diagrama circular que muestre la proporción de casos de cada categoria**
+
+```{r}
+print("El resumen numérico de 'Sex' es:")
+print(summary(fumadoresClean$Sex))
+print("El resumen numérico de 'Sport' es:")
+print(summary(fumadoresClean$Sport))
+print("El resumen numérico de 'City' es:")
+print(summary(fumadoresClean$City))
+```
+
+Los diagramas de cada uno son los siguientes:
+
+```{r}
+ggplot(fumadoresClean)+
+  geom_bar(aes(x = factor(1), fill = Sex), width = 1)+
+  ggtitle('Proporción de géneros en Sex')+
+  coord_polar('y')+
+  theme_bw()
+```
+
+Se observa como la mayor parte de los fumadores son hombres.
+
+```{r}
+ggplot(fumadoresClean)+
+  geom_bar(aes(x = factor(1), fill = Sport), width = 1)+
+  ggtitle('Proporción de cantidad de deporte en Sport')+
+  coord_polar('y')+
+  theme_bw()
+```
+Se oberva claramente como la mayor parte realiza ejercicio todos los días y en segundo puesto los que no se ejercitan.
+
+```{r}
+ggplot(fumadoresClean)+
+  geom_bar(aes(x = factor(1), fill = City), width = 1)+
+  ggtitle('Proporción de ciudades en City')+
+  coord_polar('y')+
+  theme_bw()
+```
+
+Se observa claramente la mayor participación de personas de Barcelona (mayor densidad poblacional) y de Terrasa
+
+
+# 3. Estadística inferencial
+
+## 3.1 Intervalo de confianza
+
+**Calcular el intervalo de confianza del 97 % de la capacidad pulmonar de la población.**
+
+**Nota: Se deben realizar los cálculos manualmente. No se pueden usar funciones de R que calculen directamente el intervalo de confianza como t.test o similar. Si que podeis usar funciones como qnorm, pnorm , qt y pt.**
+
+Fijamos los parámetros y calculamos
+
+```{r}
+intervalo <- 0.97
+s <- sd(fumadoresClean$PC)
+errorSd <- s/sqrt(length(fumadoresClean$PC))
+valorCritico <- (1-intervalo)/2
+tValue <- qt(c(valorCritico, 1-valorCritico), df=(length(fumadoresClean$PC)-1))
+margenError <- tValue * errorSd
+inicioIntervalo <- mean(fumadoresClean$PC) + margenError[1]
+finIntervalo <- mean(fumadoresClean$PC) + margenError[2]
+
+print(paste0("El intervalo de confianza es: [", inicioIntervalo, ',', finIntervalo, ']'))
+```
+
+
+## 3.2 Analizar la capacidad pulmonar de las mujeres
+
+**Asumimos que conocemos la capacidad pulmonar media de la población, que es igual a 3.30. ¿Podemos decir que la capacidad pulmonar de las mujeres es inferior a la media poblacional, con un nivel de confianza del 95 %? Para responder a esta pregunta, siga los pasos que se indican.**
+
+**Nota: Se deben realizar los cálculos manualmente. No se pueden usar funciones de R que calculen directamente el intervalo de confianza como t.test o similar. Si que podeis usar funciones como qnorm, pnorm , qt y pt.**
+
+### 3.2.1 Escribir la hipótesis nula y alternativa
+
+* La hipótesis nula  H0 es: "La media poblaciona es igual a 3.30" meanPC = 3.30
+
+* La hipótesis alternativa (unilateral) es: "La capacidad pulmonar de las mujeres es menor a la media poblacional" meanPC(mujeres) < 3.30
+
+### 3.2.2 Método
+
+**Indicar cuál es el método más apropiado para hacer este análisis, en función de las características de la muestra y el objetivo del análisis.**
+
+En este caso se utilizara un método de contraste entre las medias de las poblaciones, basado en el p-valor para rechazar o aceptar la hipótesis nula.
