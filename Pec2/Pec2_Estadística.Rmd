@@ -206,7 +206,7 @@ print(paste0("El intervalo de confianza es: [", inicioIntervalo, ',', finInterva
 
 ### 3.2.1 Escribir la hip贸tesis nula y alternativa
 
-* La hip贸tesis nula  H0 es: "La media poblaciona es igual a 3.30" meanPC = 3.30
+* La hip贸tesis nula  H0 es: "La capacidad pulmonar de las mujeres es igual a 3.30" meanPC = 3.30
 
 * La hip贸tesis alternativa (unilateral) es: "La capacidad pulmonar de las mujeres es menor a la media poblacional" meanPC(mujeres) < 3.30
 
@@ -214,4 +214,114 @@ print(paste0("El intervalo de confianza es: [", inicioIntervalo, ',', finInterva
 
 **Indicar cu谩l es el m茅todo m谩s apropiado para hacer este an谩lisis, en funci贸n de las caracter铆sticas de la muestra y el objetivo del an谩lisis.**
 
-En este caso se utilizara un m茅todo de contraste entre las medias de las poblaciones, basado en el p-valor para rechazar o aceptar la hip贸tesis nula.
+En este caso se utilizara un m茅todo de contraste entre las medias de las poblaciones, basado en el p-valor para rechazar o aceptar la hip贸tesis nula, sabiendo que en este caso se trata de un problema donde la desviacion tipica no es conocida.
+
+### 3.2.3. Calcular el estad韘tico de contraste, el valor cr韙ico y el valor p
+
+El estad韘tico de contraste es el siguiente: (x - u) / (s/n^0.5)
+
+```{r}
+u <-  3.30
+x <- mean(fumadoresClean[fumadoresClean$Sex == 'F',]$PC)
+s <- sd(fumadoresClean[fumadoresClean$Sex == 'F',]$PC)
+n <- nrow(fumadoresClean[fumadoresClean$Sex == 'F',])
+
+t <- (x - u) / (s/sqrt(n))
+print(paste("El 閟tadistico del contraste es: ", t))
+```
+
+```{r}
+valCritico <- qt(p = 0.95, df = 136)
+print(paste("El valor critico es: ", valCritico))
+```
+
+Por lo tanto el valor cr韙ico es mayor al valor del estad韘tico de contraste, `t<valCritico`, dado que para aceptar el valor t136 debe de ser mayor que t (el calculado) se deber韆 de aceptar la hip髏esis nula.
+
+Utilizando los valores calculados sacamos el p-valor:
+
+```{r}
+p_value <- pt(q = t, lower.tail = TRUE, df = 136)
+print(paste("El p-valor es: ", p_value))
+```
+
+Como el p-valor es mayor que el grado de significacion se debe de aceptar la hip髏esis nula.
+
+### 3.2.4. Interpretar el resultado
+
+Como se acepta la hipotesis nula no podemos concluir que la capacidad pulmonar de las mujeres es inferior al valor de la media de la capacidad pulmonar poblacional.
+
+
+## 3.3. Comparaci髇 entre fumadores y no fumadores
+
+**Nos preguntamos si la capacidad pulmonar de los fumadores es inferior a la capacidad pulmonar de los no fumadores. Aplicar un test de hip髏esis para contrastar la hip髏esis anterior con un 95 % de confianza e interpretar el resultado**
+
+**Nota: Se deben realizar los c谩lculos manualmente. No se pueden usar funciones de R que calculen directamente el intervalo de confianza como t.test o similar. Si que podeis usar funciones como qnorm, pnorm , qt y pt.**
+
+### 3.3.1. Hip髏esis nula y alternativa
+
+* La hip贸tesis nula  H0 es: "La capacidad pulmonar de los no fumadores es" meanPC(nofumadores) = 3.77
+
+```{r}
+u <- mean(fumadoresClean[fumadoresClean$Cig == 0,]$PC)
+```
+
+
+* La hip贸tesis alternativa (unilateral) es: "La capacidad pulmonar de los fumadores es menor a la media de la capacidad pulmonar de los no fumadores" meanPC(fumadores) < meanPC(nofumadores) 
+
+### 3.3.2. M閠odo
+
+**Explicar el m閠odo que aplicar閕s para realizar este contraste y justificalo**
+
+Al tratarse de unas muestras de una cantidad mayor a 80 observaciones, se van a tratar como variables que siguen una distribuci髇 normal, por lo tanto se va a aplicar un contraste de hip髏esis utilizando el caso de la varianza conocida
+
+### 3.2.3. Calcular el estad韘tico de contraste, el valor cr韙ico y el valor p.
+
+El estad韘tico de contraste es el siguiente: (x - u) / (sigma/n^0.5)
+
+```{r}
+u <-  mean(fumadoresClean[fumadoresClean$Cig == 0,]$PC)
+x <- mean(fumadoresClean[fumadoresClean$Cig != 0,]$PC)
+sigma <- sd(fumadoresClean[fumadoresClean$Cig != 0,]$PC)
+n <- nrow(fumadoresClean[fumadoresClean$Cig != 0,])
+
+t <- (x - u) / (sigma/sqrt(n))
+print(paste("El 閟tadistico del contraste es: ", t))
+```
+
+```{r}
+valCritico <- qt(p = 0.95, df = n-1)
+print(paste("El valor critico es: ", valCritico))
+```
+
+Por lo tanto el valor cr韙ico es mayor al valor del estad韘tico de contraste, `t<valCritico`, dado que para aceptar el valor t130 debe de ser mayor que t (el calculado) se deber韆 de aceptar la hip髏esis nula.
+
+Utilizando los valores calculados sacamos el p-valor:
+
+```{r}
+p_value <- pt(q = t, lower.tail = TRUE, df = n-1)
+print(paste("El p-valor es: ", p_value))
+```
+
+### 3.3.4. 縔 al 99% de confianza? Rehacer los c醠culos
+
+```{r}
+u <-  mean(fumadoresClean[fumadoresClean$Cig == 0,]$PC)
+x <- mean(fumadoresClean[fumadoresClean$Cig != 0,]$PC)
+sigma <- sd(fumadoresClean[fumadoresClean$Cig != 0,]$PC)
+n <- nrow(fumadoresClean[fumadoresClean$Cig != 0,])
+
+t <- (x - u) / (sigma/sqrt(n))
+print(paste("El 閟tadistico del contraste es: ", t))
+
+valCritico <- qt(p = 0.99, df = n-1)
+print(paste("El valor critico es: ", valCritico))
+
+p_value <- pt(q = t, lower.tail = TRUE, df = n-1)
+print(paste("El p-valor es: ", p_value))
+```
+
+### 3.3.5. Interpretaci髇
+
+**Interpretar los resultados obtenidos**
+
+Para ambos casos el valor
