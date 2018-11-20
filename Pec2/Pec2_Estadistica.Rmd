@@ -1,0 +1,463 @@
+---
+title: "Actividad 2: Analisis descriptivo e inferencial"
+author: "Gonzalo Mellizo-Soto Diaz"
+date: '`r format(Sys.Date(),"%e de %B, %Y")`'
+output:
+  html_document:
+    toc: yes
+  pdf_document:
+    toc: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r load_libraries, include=FALSE}
+library(ggplot2)
+```
+
+
+**NOTA: por problemas con el encoding no se van a utilizar tildes, disculpen las molestias**
+
+# 1. Carga de los datos
+
+**Cargar el archivo de datos Fumadores_clean_5Y.csv y validar que los tipos de datos se interpretan correctamente.**
+
+Cargamos los datos iniciales y comprobamos los tipos
+
+```{r}
+fumadoresClean <- read.csv('Fumadores_clean_5Y.csv')
+head(fumadoresClean)
+```
+
+```{r}
+str(fumadoresClean)
+```
+
+Vemos como los datos se cargan correctamente y los factores son expresados como tal (se podría mantener el ordinal realizado en la práctica anterior) y como las variable numericas se convierten bien a integer o double segun la necesidad.
+
+# 2. Estadastica descriptiva
+
+**En primer lugar, estudiaremos los valores centrales y de dispersion de algunas variables del conjunto de datos. Siga los pasos que se especifican a continuacion**
+
+## 2.1 Valores centrales
+
+**Media, mediana y los cinco numeros (de Tukey) de la capacidad pulmonar.**
+
+```{r}
+print(paste("La media de la capacidad pulmonar es: ",
+            mean(fumadoresClean$PC)))
+print(paste("La mediana de la capacidad pulmonar es: ",
+            median(fumadoresClean$PC)))
+print("El resumen de los cinco numeros es: ")
+summary(fumadoresClean$PC)
+```
+
+El punto medio seria la media entre el punto 150 y 151 del vector (ordenado), en este caso coincidiendo con la mediana. El summary tambien muestra la media por lo que se podria realizar en un simple comando.
+
+
+**Visualizar la muestra de valores en un diagrama de caja (boxplot)**
+
+Para la visualizacion utilizaremos ggplot2
+
+```{r fig.height=6, fig.width=4}
+ggplot(data = fumadoresClean, aes(x = 'PC', y = PC))+
+  geom_boxplot()+
+  theme_bw()
+```
+
+
+**Â¿Se detectan valores extremos (outliers) en el diagrama?**
+
+Si, se detecta un valor atipico, el valor maximo de 1.557.
+
+** A continuacion, mostrar mediante diagramas de caja la capacidad pulmonar separando el genero femenino y el masculino**
+
+```{r}
+ggplot(fumadoresClean, aes(x = Sex, y = PC, fill = Sex))+
+  geom_boxplot()+
+  theme_bw()
+```
+
+
+Se puede apreciar como la capacidad pulmonar es mayor y ligeramente menos dispersa para el genero masculino.
+
+**Mostrar, finalmente, mediante diagramas de caja la comparacion entre el valor de PC original y al cabo de 5 años. Interpretar los resultados.**
+
+```{r}
+ggplot(data = fumadoresClean) + 
+  geom_boxplot(aes(x = 'PC', y = PC, fill = "PC"))+
+  geom_boxplot(aes(x = "PC5Y", y = PC5Y, fill = "PC5Y"))+
+  theme_bw()
+```
+
+
+Segun la distribucion de las cajas, podemos concluir con que a los 5 años se muestran valores mas dispersos, por ejemplo, el valor atipico tras los cinco años deja de serlo.
+
+La mediana se mantiene estable (ligeramente mas baja), mientras que los valores entre el primer cuartil y la mediana son mas dispersos que en la toma inicial.
+
+
+## 2.2 Dispersion
+
+**Calcular la dispersion de la capacidad pulmonar usando las medidas: varianza, desviacion atpica y rango intercuartilico.**
+
+Las medidas de dispersion son las siguientes:
+
+```{r}
+print(paste("La varianza es:",  var(fumadoresClean$PC)))
+print(paste("La desviacion tipica es:", sd(fumadoresClean$PC)))
+print(paste("El rango intercuartilico es:", IQR(fumadoresClean$PC)))
+
+```
+
+
+## 2.3 Calculo manual de la dispersion
+
+**Calcular la desviacion tipica de la capacidad pulmonar manualmente y comparar el resultado con la funcion correspondiente de R.**
+
+Implementamos manualmente la funcion:
+
+```{r}
+sqrt(sum((fumadoresClean$PC - mean(fumadoresClean$PC))^2)/ (length(fumadoresClean$PC)))
+```
+ Existe una diferencia y es que la funcion de R utiliza la varianza muestral, N-1 en lugar de N:
+ 
+```{r}
+sqrt(sum((fumadoresClean$PC - mean(fumadoresClean$PC))^2)/ (length(fumadoresClean$PC) - 1))
+```
+ 
+## 2.4 Histograma
+ 
+**Representar un histograma de la variable PC. Si es necesario, configura los parametros del histograma para que se vea con una buena precision.** 
+
+```{r}
+ggplot(fumadoresClean, aes(x=PC))+
+  geom_histogram(bins = 35)+
+  theme_bw()
+```
+
+Este grafico nos ayuda a comprender la distribucion de los datos, en este caso se observa claramente como la mayoria de datos se encuentran comprendidos entre los valores 3 y 4.
+
+
+## 2.5 Datos categoricos
+
+**En las variables Sex, Sport y City, realizar un resumen numerico y dibujar un diagrama circular que muestre la proporcion de casos de cada categoria**
+
+```{r}
+print("El resumen numerico de 'Sex' es:")
+print(summary(fumadoresClean$Sex))
+print("El resumen numerico de 'Sport' es:")
+print(summary(fumadoresClean$Sport))
+print("El resumen numerico de 'City' es:")
+print(summary(fumadoresClean$City))
+```
+
+Los diagramas de cada uno son los siguientes:
+
+```{r}
+ggplot(fumadoresClean)+
+  geom_bar(aes(x = factor(1), fill = Sex), width = 1)+
+  ggtitle('Proporcion de generos en Sex')+
+  coord_polar('y')+
+  theme_bw()
+```
+
+Se observa como la mayor parte de los fumadores son hombres.
+
+```{r}
+ggplot(fumadoresClean)+
+  geom_bar(aes(x = factor(1), fill = Sport), width = 1)+
+  ggtitle('Proporcion de cantidad de deporte en Sport')+
+  coord_polar('y')+
+  theme_bw()
+```
+Se oberva claramente como la mayor parte realiza ejercicio todos los dias y en segundo puesto los que no se ejercitan.
+
+```{r}
+ggplot(fumadoresClean)+
+  geom_bar(aes(x = factor(1), fill = City), width = 1)+
+  ggtitle('Proporcion de ciudades en City')+
+  coord_polar('y')+
+  theme_bw()
+```
+
+Se observa claramente la mayor participacion de personas de Barcelona (mayor densidad poblacional) y de Terrasa
+
+
+# 3. Estadistica inferencial
+
+## 3.1 Intervalo de confianza
+
+**Calcular el intervalo de confianza del 97 % de la capacidad pulmonar de la poblacion.**
+
+**Nota: Se deben realizar los calculos manualmente. No se pueden usar funciones de R que calculen directamente el intervalo de confianza como t.test o similar. Si que podeis usar funciones como qnorm, pnorm , qt y pt.**
+
+Fijamos los parametros y calculamos
+
+```{r}
+intervalo <- 0.97
+s <- sd(fumadoresClean$PC)
+errorSd <- s/sqrt(length(fumadoresClean$PC))
+valorCritico <- (1-intervalo)/2
+tValue <- qnorm(c(valorCritico, 1-valorCritico))
+margenError <- tValue * errorSd
+inicioIntervalo <- mean(fumadoresClean$PC) + margenError[1]
+finIntervalo <- mean(fumadoresClean$PC) + margenError[2]
+
+print(paste0("El intervalo de confianza es: [", inicioIntervalo, ',', finIntervalo, ']'))
+```
+
+
+## 3.2 Analizar la capacidad pulmonar de las mujeres
+
+**Asumimos que conocemos la capacidad pulmonar media de la poblacion, que es igual a 3.30. Â¿Podemos decir que la capacidad pulmonar de las mujeres es inferior a la media poblacional, con un nivel de confianza del 95 %? Para responder a esta pregunta, siga los pasos que se indican.**
+
+**Nota: Se deben realizar los calculos manualmente. No se pueden usar funciones de R que calculen directamente el intervalo de confianza como t.test o similar. Si que podeis usar funciones como qnorm, pnorm , qt y pt.**
+
+### 3.2.1 Escribir la hipotesis nula y alternativa
+
+* La hipotesis nula  H0 es: "La capacidad pulmonar de las mujeres es igual a 3.30" mu = 3.30
+
+* La hipotesis alternativa (unilateral) es: "La capacidad pulmonar de las mujeres es menor a la media poblacional" mu < 3.30
+
+### 3.2.2 Metodo
+
+**Indicar cual es el metodo mas apropiado para hacer este analisis, en funcion de las caracteristicas de la muestra y el objetivo del analisis.**
+
+En este caso se utilizara un metodo de contraste entre las medias de las poblaciones, basado en el p-valor para rechazar o aceptar la hipotesis nula, sabiendo que en este caso se trata de un problema donde la desviacion tipica no es conocida. Dado que la cantidad de observaciones es mayor de 80 se considera que la variable sigue una distribucion normal.
+
+### 3.2.3. Calcular el estadistico de contraste, el valor critico y el valor p
+
+El estadistico de contraste es el siguiente: (x - u) / (s/n^0.5)
+
+```{r}
+u <-  3.30
+x <- mean(fumadoresClean[fumadoresClean$Sex == 'F',]$PC)
+s <- sd(fumadoresClean[fumadoresClean$Sex == 'F',]$PC)
+n <- nrow(fumadoresClean[fumadoresClean$Sex == 'F',])
+
+t <- (x - u) / (s/sqrt(n))
+print(paste("El estadistico del contraste es: ", t))
+```
+
+```{r}
+valCritico <- qnorm(p = 0.05)
+print(paste("El valor critico es: ", valCritico))
+```
+
+Utilizando los valores calculados sacamos el p-valor:
+
+```{r}
+p_value <- pnorm(q = t, lower.tail = TRUE)
+print(paste("El p-valor es: ", p_value))
+```
+
+Como el p-valor es mayor que el grado de significacion se debe de aceptar la hipotesis nula.
+
+### 3.2.4. Interpretar el resultado
+
+Como se acepta la hipotesis nula no podemos concluir que la capacidad pulmonar de las mujeres es inferior al valor de la media de la capacidad pulmonar poblacional.
+
+
+## 3.3. Comparacion entre fumadores y no fumadores
+
+**Nos preguntamos si la capacidad pulmonar de los fumadores es inferior a la capacidad pulmonar de los no fumadores. Aplicar un test de hipotesis para contrastar la hipotesis anterior con un 95 % de confianza e interpretar el resultado**
+
+**Nota: Se deben realizar los calculos manualmente. No se pueden usar funciones de R que calculen directamente el intervalo de confianza como t.test o similar. Si que podeis usar funciones como qnorm, pnorm , qt y pt.**
+
+### 3.3.1. Hipotesis nula y alternativa
+
+* La hipotesis nula  H0 es: "La capacidad pulmonar de los no fumadores es igual a la capacidad pulmonar de los fumadores" mu(fumadores) = mu(noFumadores) 
+
+* La hipotesis alternativa (unilateral) es: "La capacidad pulmonar de los fumadores es menor a la media de la capacidad pulmonar de los no fumadores" mu(fumadores) < mu(noFumadores) 
+
+### 3.3.2. Metodo
+
+**Explicar el metodo que aplicareis para realizar este contraste y justificalo**
+
+Al tratarse de unas muestras de una cantidad mayor a 80 observaciones, se van a tratar como variables que siguen una distribucion normal, por lo tanto se va a aplicar un contraste de hipotesis y una valoracion del p valor sobre una variable de distribucion normal.
+
+### 3.2.3. Calcular el estadistico de contraste, el valor critico y el valor p.
+
+El estadistico de contraste es el siguiente: (x - u) / (sigma/n^0.5)
+
+
+```{r}
+u <-  mean(fumadoresClean[fumadoresClean$Cig == 0,]$PC)
+x <- mean(fumadoresClean[fumadoresClean$Cig != 0,]$PC)
+sigma <- sd(fumadoresClean[fumadoresClean$Cig != 0,]$PC)
+n <- nrow(fumadoresClean[fumadoresClean$Cig != 0,])
+
+t <- (x - u) / (sigma/sqrt(n))
+print(paste("El estadistico del contraste es: ", t))
+```
+
+```{r}
+valCritico <- qnorm(p = 0.05)
+print(paste("El valor critico es: ", valCritico))
+```
+
+Por lo tanto el valor critico es mayor al valor del estadistico de contraste, `t<valCritico`, dado que para aceptar el valor t130 debe de ser mayor que t (el calculado) se deberia de aceptar la hipotesis nula.
+
+Utilizando los valores calculados sacamos el p-valor:
+
+```{r}
+p_value <- pnorm(q = t, lower.tail = TRUE)
+print(paste("El p-valor es: ", p_value))
+```
+
+### 3.3.4. Â¿Y al 99% de confianza? Rehacer los calculos
+
+```{r}
+u <-  mean(fumadoresClean[fumadoresClean$Cig == 0,]$PC)
+x <- mean(fumadoresClean[fumadoresClean$Cig != 0,]$PC)
+sigma <- sd(fumadoresClean[fumadoresClean$Cig != 0,]$PC)
+n <- nrow(fumadoresClean[fumadoresClean$Cig != 0,])
+
+t <- (x - u) / (sigma/sqrt(n))
+print(paste("El estadistico del contraste es: ", t))
+
+valCritico <- qnorm(p = 0.01)
+print(paste("El valor critico es: ", valCritico))
+
+p_value <- pnorm(q = t, lower.tail = TRUE)
+print(paste("El p-valor es: ", p_value))
+```
+
+### 3.3.5. Interpretacion
+
+**Interpretar los resultados obtenidos**
+
+Para ambos casos el valor valor del p-valor es cercano a cero, por lo que para ambas se rechaza la hipotesis nula por lo que se acepta la hipotesis alternativa de que los fumadores tienen menor capacidad pulmonar que los no fumadores, se trata de un resultado logico dado que fumar afecta a la capacidad pulmonar de las personas que lo consumen.
+
+
+**EXTRA**
+
+*Se realizan los calculos anteriores de forma alternativa*
+
+En este apartado se van a realizar unos calculos extra y realizar dos constrastes de hipotesis utilizando la media pobleacional, ambas con la hipotesis nula de que la media poblacional es igual a 3.30, el primer calculo con la hipotesis alternativa de que la mu(fumadores) < mu y la segunda con que mu(fumadores) > mu
+
+*Contraste con la hipotesis alternativa de fumadores*
+
+```{r}
+u <-  3.30
+x <- mean(fumadoresClean[fumadoresClean$Cig != 0,]$PC)
+s <- sd(fumadoresClean[fumadoresClean$Cig != 0,]$PC)
+n <- nrow(fumadoresClean[fumadoresClean$Cig != 0,])
+
+t <- (x - u) / (s/sqrt(n))
+print(paste("El estadistico del contraste es: ", t))
+
+valCritico <- qnorm(p = 0.05)
+print(paste("El valor critico es: ", valCritico))
+
+p_value <- pnorm(q = t, lower.tail = TRUE)
+print(paste("El p-valor es: ", p_value))
+```
+
+El p-valor se encuentra por debajo del nivel de significacion de la hipotesis nula, por lo que se rechaza y acepta la hipotesis alternativa de que los fumadores tienen una capacidad pulmonar menor a la media poblacional.
+
+*Contraste con la hipotesis alternativa de no fumadores*
+
+```{r}
+u <-  3.30
+x <- mean(fumadoresClean[fumadoresClean$Cig == 0,]$PC)
+s <- sd(fumadoresClean[fumadoresClean$Cig == 0,]$PC)
+n <- nrow(fumadoresClean[fumadoresClean$Cig == 0,])
+
+t <- (x - u) / (s/sqrt(n))
+print(paste("El estadistico del contraste es: ", t))
+
+valCritico <- qnorm(p = 0.95)
+print(paste("El valor critico es: ", valCritico))
+
+p_value <- pnorm(q = t, lower.tail = FALSE)
+print(paste("El p-valor es: ", p_value))
+```
+
+Si volvemos a realizar los calculos con un intervalo de confianza del 99% disminuira el nivel de significacion pero el p-valor sera tan pequeño que para los dos constrastes se rechazara la hipotesis nula. Por lo que la interpretacion sera igual que en el apartado anterior, al confirmar que la capacidad pulmonar es menor para los fumadores y mayor para los no fumadores:
+
+`mu(fumadores) < mu(poblacional) < mu(noFumadores)`
+
+`mu(fumadores) < mu(noFumadores)`
+
+
+## 3.4. Despues de 5 años
+
+**Despues de 5 años se mide de nuevo la capacidad pulmonar de las mismas personas del estudio. La columna PC5Y incorpora la capacidad pulmonar de los mismos sujetos a los 5 años. Nos preguntamos si la capacidad pulmonar ha cambiado significativamente, con un nivel de confianza del 95 % en el caso de los fumadores y en el caso de los no fumadores. Responda a las siguientes preguntas**
+
+**Nota: no se puede usar funciones de R que calculen el contraste directamente, al igual que en los ejercicios previos**
+
+```{r}
+inter <- 0.95
+a <- 1 - inter
+```
+
+
+### 3.4.1 Calcular si existen diferencias significativas en los no fumadores entre la capacidad pulmonar inicial y la capacidad pulmonar al cabo de 5 años. Realice los pasos necesarios.
+
+**Escribir la hipotesis nula y alternativa, el metodo elegido y los calculos**
+
+**Nota: Si define una funcion que realice este calculo, puede usarla en este apartado y en el siguiente, donde hay que repetir el mismo calculo para otros datos.**
+
+#### 3.4.1.1. Hipotesis nula y alternativa
+
+**Escribir la hipotesis nula y alternativa**
+
+* La hipotesis nula  H0 es: "La capacidad pulmonar de los no fumadores no se ha visto afectada" `mu0 = 0`
+
+* La hipotesis alternativa (bilateral) es: "La capacidad pulmonar de los fumadores se ha visto afectada por el tiempo" `mu != 0` 
+
+#### 3.4.1.2. Metodo
+
+**Indicar el metodo que usareis y su justificacion**
+
+En este caso se va a aplicar un contraste de hipotesis de datos aparejados, debido a que cada individuo posee dos observaciones de la misma variable. Para ello se supone, por el teorema del limite central, que estamos tratando con variables que tienen una distribucion normal.
+
+#### 3.4.1.3. Calculo
+
+**Realizar los calculos necesarios**
+
+```{r}
+calcContraste <- function(df, inicial, final, a, conf){
+  dif_val <- df[[inicial]] - df[[final]]
+  x <- mean(dif_val)
+  print(paste("Media: ",x))
+  s <- sd(dif_val)
+  print(paste("Desviacion: ",s))
+  errorSd <- s / sqrt(nrow(df))
+  
+  t <- x / errorSd
+  
+  valCritico <- qnorm(conf)
+  p_value <- pnorm(q = abs(t), lower.tail = FALSE)*2
+  print(paste("El estadistico del contraste es: ", t))
+  print(paste("El valor critico es: ", valCritico))
+  print(paste("El p-valor es: ", p_value))
+}
+
+```
+
+Los calculos para los fumadores son los siguientes:
+
+```{r}
+
+calcContraste(fumadoresClean[fumadoresClean$Cig != 0,], 'PC', 'PC5Y', a=0.05, conf = 0.95)
+```
+
+
+### 3.4.2. Realizar el mismo calculo pero ahora por los no fumadores
+
+El calculo para los no fumadores es el siguiente:
+
+```{r}
+calcContraste(fumadoresClean[fumadoresClean$Cig == 0,], 'PC', 'PC5Y', a=0.05, conf = 0.95)
+```
+
+
+### 3.4.3. Interpretar los resultados obtenidos en los dos contrastes
+
+Para el caso de los fumadores tenemos un p-valor de 0.000, por lo tanto se debe de rechazar la hipotesis nula de que el valor no se ha modificado en 5 años, con lo que se puede interpretar que la capacidad pulmonar cambia, se podria realizar el estudio con la hipotesis unilateral de que el valor disminuye, sin embargo, en el enunciado se expone *Calcular si existen diferencias significativas* por lo que solo se busca la diferencia.
+
+Por el otro lado, a la hora de compararlo con los no fumadores el p-valor es del orden de 0.3054, mayor del nivel de significacion del 0.05, por lo que no se puede rechazar la hipotesis nula, por lo que no se puede  afirmar que se encuentran cambios notables en los 5 años.
