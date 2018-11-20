@@ -189,7 +189,7 @@ intervalo <- 0.97
 s <- sd(fumadoresClean$PC)
 errorSd <- s/sqrt(length(fumadoresClean$PC))
 valorCritico <- (1-intervalo)/2
-tValue <- qt(c(valorCritico, 1-valorCritico), df=(length(fumadoresClean$PC)-1))
+tValue <- qnorm(c(valorCritico, 1-valorCritico))
 margenError <- tValue * errorSd
 inicioIntervalo <- mean(fumadoresClean$PC) + margenError[1]
 finIntervalo <- mean(fumadoresClean$PC) + margenError[2]
@@ -231,7 +231,7 @@ print(paste("El éstadistico del contraste es: ", t))
 ```
 
 ```{r}
-valCritico <- qt(p = 0.95, df = 136)
+valCritico <- qnorm(p = 0.95)
 print(paste("El valor critico es: ", valCritico))
 ```
 
@@ -240,7 +240,7 @@ Por lo tanto el valor crítico es mayor al valor del estadístico de contraste, `t
 Utilizando los valores calculados sacamos el p-valor:
 
 ```{r}
-p_value <- pt(q = t, lower.tail = TRUE, df = 136)
+p_value <- pnorm(q = t, lower.tail = TRUE)
 print(paste("El p-valor es: ", p_value))
 ```
 
@@ -250,6 +250,7 @@ Como el p-valor es mayor que el grado de significacion se debe de aceptar la hip
 
 Como se acepta la hipotesis nula no podemos concluir que la capacidad pulmonar de las mujeres es inferior al valor de la media de la capacidad pulmonar poblacional.
 
+---------------------REHACER---------------------
 
 ## 3.3. Comparación entre fumadores y no fumadores
 
@@ -325,3 +326,85 @@ print(paste("El p-valor es: ", p_value))
 **Interpretar los resultados obtenidos**
 
 Para ambos casos el valor
+
+
+---------------------REHACER---------------------
+
+## 3.4. Después de 5 años
+
+**Después de 5 años se mide de nuevo la capacidad pulmonar de las mismas personas del estudio. La columna PC5Y incorpora la capacidad pulmonar de los mismos sujetos a los 5 años. Nos preguntamos si la capacidad pulmonar ha cambiado significativamente, con un nivel de confianza del 95 % en el caso de los fumadores y en el caso de los no fumadores. Responda a las siguientes preguntas**
+
+**Nota: no se puede usar funciones de R que calculen el contraste directamente, al igual que en los ejercicios previos**
+
+```{r}
+inter <- 0.95
+a <- 1 - inter
+```
+
+
+### 3.4.1 Calcular si existen diferencias significativas en los no fumadores entre la capacidad pulmonar inicial y la capacidad pulmonar al cabo de 5 años. Realice los pasos necesarios.
+
+**Escribir la hipótesis nula y alternativa, el método elegido y los cálculos**
+
+**Nota: Si define una función que realice este cálculo, puede usarla en este apartado y en el siguiente, donde hay que repetir el mismo cálculo para otros datos.**
+
+#### 3.4.1.1. Hipótesis nula y alternativa
+
+**Escribir la hipótesis nula y alternativa**
+
+* La hipÃ³tesis nula  H0 es: "La capacidad pulmonar de los no fumadores no se ha visto afectada" `mu0 = 0`
+
+* La hipÃ³tesis alternativa (bilateral) es: "La capacidad pulmonar de los fumadores se ha visto afectada por el tiempo" `mu != 0` 
+
+#### 3.4.1.2. Método
+
+**Indicar el método que usareis y su justificación**
+
+En este caso se va a aplicar un contraste de hipotesis de datos aparejados, debido a que cada individuo posee dos observaciones de la misma variable. Para ello se supone, por el teorema del limite central, que estamos tratando con variables que tienen una distribución normal.
+
+#### 3.4.1.3. Cálculo
+
+**Realizar los cálculos necesarios**
+
+```{r}
+calcContraste <- function(df, inicial, final, a, conf){
+  dif_val <- df[[inicial]] - df[[final]]
+  x <- mean(dif_val)
+  print(paste("Media: ",x))
+  s <- sd(dif_val)
+  print(paste("Desviacion: ",s))
+  errorSd <- s / sqrt(nrow(df))
+  
+  t <- x / errorSd
+  
+  valCritico <- qnorm(conf)
+  p_value <- pnorm(q = abs(t), lower.tail = FALSE)*2
+  print(paste("El éstadistico del contraste es: ", t))
+  print(paste("El valor critico es: ", valCritico))
+  print(paste("El p-valor es: ", p_value))
+}
+
+```
+
+Los cálculos para los fumadores son los siguientes:
+
+```{r}
+
+calcContraste(fumadoresClean[fumadoresClean$Cig != 0,], 'PC', 'PC5Y', a=0.05, conf = 0.95)
+```
+
+
+### 3.4.2. Realizar el mismo cálculo pero ahora por los no fumadores
+
+El cálculo para los no fumadores es el siguiente:
+
+```{r}
+calcContraste(fumadoresClean[fumadoresClean$Cig == 0,], 'PC', 'PC5Y', a=0.05, conf = 0.95)
+```
+
+
+### 3.4.3. Interpretar los resultados obtenidos en los dos contrastes
+
+Para el caso de los fumadores tenemos un p-valor de 0.000, por lo tanto se debe de rechazar la hipótesis nula de que el valor no se ha modificado en 5 años, con lo que se puede interpretar que la capacidad pulmonar cambia, se podría realizar el estudio con la hipótesis unilateral de que el valor disminuye, sin embargo, en el enunciado se expone *Calcular si existen diferencias significativas* por lo que solo se busca la diferencia.
+
+Por el otro lado, a la hora de compararlo con los no fumadores el p-valor es del orden de 0.3054, mayor del nivel de significación del 0.05, por lo que no se puede rechazar la hipótesis nula y afirmar que se encuentran cambios notables en los 5 años.
