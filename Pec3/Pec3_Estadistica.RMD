@@ -13,8 +13,161 @@ output:
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-```{r load_libraries, include=FALSE}
 
+**Pasos previos**
+
+Cargamos el fichero y obervamos las variables
+
+```{r}
+fumadores <- read.csv('Fumadores_clean_5Y_1.csv')
+head(fumadores)
 ```
 
 
+
+# 1. Modelo de regresión lineal
+
+*Primeramente, estudiaremos la posible asociación entre la capacidad pulmonar y algunas características de cada individuo.*
+
+## 1.1. Modelo de regresión lineal múltiple (regresores cuantitativos)
+
+*Estimar por mínimos cuadrados ordinarios un modelo lineal que explique la capacidad pulmonar (PC) de un individuo en función de tres factores cuantitativos: el peso (Weight), el número de cigarrillos que fuma al dia (Cig), y el número de años que hace que fuma (Years)*
+
+*Evaluar la bondad de ajuste a través del coeficiente de determinación (R^2). Podéis usar la instrucción de R ´lm´ *
+
+*Ademas, evaluar si alguno de los regresores tiene influencia significativa (p-valor del contraste individual inferior al 5 %)*
+
+*Observa que, a diferencia de Weight, no se ha añadido al modelo de regresión la variable Height, ¿desde el punto de vista de la calidad del modelo de regresión, puedes indicar una razón que justifique el no hacerlo?*
+
+Lo primero es realizar la regresión lineal utilizando las variables mencionadas:
+
+```{r}
+lm_fumadores <- lm(PC ~ Weight+Cig+Years, data = fumadores)
+lm_fumadores
+```
+
+Una vez tenemos el modelo podemos obteber el coeficiente de determinación, los p-valores individuales:
+
+```{r}
+summary(lm_fumadores)
+```
+
+Coeiciente de determinación
+```{r}
+print(paste0("El coeficiente de determinación es: ", summary(lm_fumadores)$r.squared))
+```
+
+Calculándolo sin utilizar el summary sería de la sigueinte manera:
+```{r}
+cor(fumadores$PC, lm_fumadores$fitted.values)^2
+```
+
+Para obtener los p-valores individuales volvemos a utilizar el summary:
+
+```{r}
+summary(lm_fumadores)$coefficients
+```
+
+En concreto:
+
+```{r}
+summary(lm_fumadores)$coefficients[2:4, 4]
+```
+
+La siguientes variables tienen p-valores menores a 5%:
+
+```{r}
+summary(lm_fumadores)$coefficients[2:4, 4] < 0.05
+```
+
+No se ha incluido la variable Height debido a la correlación que mantienen las dos variables es muy alta y desde el puto de vista estádistico, para realizar un buen modelo necesitamos que las variables sean independientes:
+
+```{r}
+cor(fumadores$Height, fumadores$Weight)
+```
+
+## 1.2. Modelo de regresión lineal múltiple (regresores cuantitativos y cualitativos)
+
+*Estimar por mínimos cuadrados ordinarios un modelo lineal que explique la capacidad pulmonar (PC) de un individuo en función de cinco regresores. Además de los tres anteriores (Years, Cig y Weight) ahora se añade las variables Sex y Sport. Usar como categoría de referencia de la variable Sex la categoria “F” y de la variable Sport la categoria “N” (para ello usar la función relevel() ). Se pueden definir nuevas variables, SexR y SportR, para esta nueva reordenación.*
+
+
+*Evaluar la bondad del ajuste a través del coeficiente de determinación (R2) y comparar el resultado de este modelo con el obtenido en el apartado 1.1. Podéis usar la instrucción de R lm y usar el coeficiente R-cuadrado ajustado en la comparación. Interpretar también el significado de los coeficientes obtenidos y su significación estadística.*
+
+Creamos las nuevas variables y comprobamos su reordenación
+
+```{r}
+fumadores$SportR <- relevel(fumadores$Sport, 'N')
+fumadores$SexR <- relevel(fumadores$Sex, 'F')
+levels(fumadores$SportR)
+levels(fumadores$Sport)
+levels(fumadores$SexR)
+levels(fumadores$Sex)
+```
+
+Entrenamos el nuevo modelo:
+
+```{r}
+fumadores_lm_5 <- lm(PC ~ Years + Cig + Weight + SexR + SportR, fumadores)
+summary(fumadores_lm_5)
+```
+
+Coficiente de determinación
+
+```{r}
+summary(fumadores_lm_5)$r.squared
+```
+
+En este caso nos encontramos con un valor más alto que el obtenido en el apartado 1.1 en más de una decima( 0.812 vs 0.917). A priori esta información sugiere que nos encontramos ante un modelo mejor y más robusto a la hora de determinar la variable dependiente.
+
+Como se puede apreciar en los coeficientes aparecen los niveles que se incluyen en las nuevas variables, por ello vamos a recrdar las variables, para "Sex" F = Female (mujer) M = Male (hombre) en el caso de "Sport" el significado es el siguiente N = None (Nada), S = Sometimes (de vez en cuando), R = Regularly (Regularmete) y E = Everyday (todos los días).
+
+En la variable Sport podemos identificar lo siguiente:
+
+* Practicar ejercicio todos los días aumenta significativamente la capacidad pulmonar (SportRE)
+
+* Realizar algo de ejercicio mejora la capacidad pulmonar
+
+* El coeficiente decrece si se practica menos deporte
+
+En la variable Sex se puede observar que los hombres (SexRM) aumentan positivamente la capacidad pulmonar.
+
+La cantidad de años y el número de cigarrillos al días disminuyen significativamente la capacidad pulmonar.
+
+
+## 1.3. Efectuar una predicción de la capacidad pulmonar con los dos modelos
+
+*Suponer un hombre de Lleida de 30 años de edad que hace deporte regularmente, de peso 68 kg y de altura 175 cm que fuma desde hace 15 años de 10 cigarros al dia.*
+
+*Realizar la predicción de la capacidad pulmonar (PC) con los dos modelos. Interpretar los resultados.*
+
+Creamos la nueva observación en un nuevo dataframe
+
+```{r}
+hulio <- data.frame(Years = 15, SportR = factor('R', levels = c("N","E","R","S")),
+                    Weight = 68, Height = 175, Age = 30, Cig = 10, City = 'Lleida',
+                    SexR = factor('M', levels = c('F', 'M')))
+```
+
+
+Efecuamos ambas predicciones:
+
+```{r}
+print(paste0('La predicción del primer modelo es: ',round(predict.lm(lm_fumadores, hulio), 3)))
+print(paste0('La predicción del segundo modelo es: ',round(predict.lm(fumadores_lm_5, hulio), 3)))
+```
+
+Para el primer modelo la interpretación es la siguiente:
+
+```{r}
+round(3.677888 +  0.001283*68 + 10*(-0.032711) + 15*(-0.023139), 3)
+```
+
+Los años y los cigarrillos afecta negativamente a la capacidad pulmonar, por lo que la disminuyen. Por otro lado, el peso no tiene mucha importancia, por lo que el valor disminuye.
+
+Para el segundo tenemos lo siguiente:
+
+```{r}
+round(3.561531 +  (-0.000601)*68 + 10*(-0.034035) + 15*(-0.022633) +  0.370267 + 0.102336, 3)
+```
+
+en este caso los cigarrillos y los años de fumar afectan negativamente, pero al tener en cuenta de que se trata de un hombre y que realiza ejercicio regularmente, la capacidad pulmonar aumenta en consecuencia mitigando los años de fumador y los cigarrillos en cierta medida.
