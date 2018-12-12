@@ -13,6 +13,9 @@ output:
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+```{r load_libraries, include=FALSE}
+library(pROC)
+```
 
 **Pasos previos**
 
@@ -171,3 +174,171 @@ round(3.561531 +  (-0.000601)*68 + 10*(-0.034035) + 15*(-0.022633) +  0.370267 +
 ```
 
 en este caso los cigarrillos y los años de fumar afectan negativamente, pero al tener en cuenta de que se trata de un hombre y que realiza ejercicio regularmente, la capacidad pulmonar aumenta en consecuencia mitigando los años de fumador y los cigarrillos en cierta medida.
+
+
+# 2. Modelo de regresión logística
+
+*Se desea evaluar la calidad predictiva de la capacidad pulmonar así como de otras variables presentes en el estudio respecto a la predicción de ser fumador. Por tanto, se evaluará la probabilidad de que un individuo sea fumador.*
+
+*Para evaluar esta probabilidad se aplicará un modelo de regresión logística, donde la variable depediente será una variable binaria que indicará si el individuo es fumador. Se usará la muestra disponible para estimar el modelo con las mismas variables que en el modelo 1.1.*
+
+## 2.1. Estimación de un modelo de regresión logística
+
+*El primer paso será crear una variable binaria (smoker) que indique la condición de fumador (smoker = 1) o no fumador(smoker = 0). Estimar el modelo de regresión logística donde la variable dependiente es “smoker” y las explicativas son la capacidad pulmonar (PC), Weight y SexR*
+
+*Evaluar si alguno de los regresores tiene influencia significativa (p-valor del contraste individual inferior al 5 %)*
+
+*Evaluando los resultados, ¿se puede decir que un individuo con capacidad pulmonar reducida tiene mayor probabilidad de ser fumador?*
+
+*¿Se puede decir que ser mujer aumenta la probabilidad de ser fumador?*
+
+Para crear la variable uilizaremos la variable "Years", donde aquellas personas con valores distintos de cero se consideran fumadoras (se podría también utilizar Cig para ello dado que la cantidad de ceros es igual y coinciden en posición)
+
+```{r}
+fumadores$smoker <- fumadores$Years
+fumadores$smoker[fumadores$smoker > 0] <- 1
+table(fumadores$smoker)
+```
+
+
+Como vemos tenemos 169 no fumadores y 131 fumadores. Una vez tenemos la variable generamos el modelo:
+
+```{r}
+glm_fumadores <- glm(smoker ~ PC + Weight + SexR,family = binomial, data = fumadores)
+summary(glm_fumadores)
+```
+
+La variable con más influencia se trata de la capacidad pulmonar (PC) dado que tiene un valor muy inferior al 5%, mientra que las otras lo superan.
+
+Según los coeficientes podemos observar que el valor negativo nos indica que a mayor capacidad pulmonar menor probabilidad hay de ser fumador.
+
+Según la interpretación que se le puede dar al coeficiente, ser mujer aumentea levemente la probabilidad de ser fumador, sin embargo, como se ha observado no se trata de una variable de gran significación dentro del modelo.
+
+## 2.2. Predicción en el modelo lineal generalizado (modelo de regresión logística)
+
+*Usando el modelo anterior, calculad la probabilidad de ser fumador para un hombre que tiene una capacidad pulmonar de 3.75 l/s, un peso de 68 kg y altura de 175 cm.*
+
+Creamos la observación:
+
+```{r}
+glm_test <- data.frame(Weight = 68, SexR = factor('M', levels = c('F', 'M')), PC = 3.75)
+print(paste0("La probabilidad de que sea fumador es: ",
+             round(predict.glm(glm_fumadores, glm_test, type = "response")*100,2)
+             ,'%')
+      )
+```
+
+## 2.3. Mejora del modelo
+
+*Buscar un modelo mejor al anterior añadiendo más variables explicativas. Se realizarán las siguientes pruebas:*
+
+  * *Modelo regresor que añade al anterior la variable edad (Age).*
+
+  * *Modelo regresor que añade la variable SportR.*
+
+  * *Modelo regresor que añade Age y SportR.*
+
+*Decidir si se prefiere el modelo inicial o bien uno de los modelos con Age, con SportR, o con ambas. El criterio para decidir el mejor modelo es AIC. Cuanto más pequeño es AIC mejor es el modelo*
+
+Entrenamos los modelos y vemos los resumenes:
+
+```{r}
+glm_fumadores_A <- glm(smoker ~ PC + Weight + SexR + Age,family = binomial, data = fumadores)
+glm_fumadores_S <- glm(smoker ~ PC + Weight + SexR + SportR,family = binomial, data = fumadores)
+glm_fumadores_AS <- glm(smoker ~ PC + Weight + SexR + Age + SportR,family = binomial, data = fumadores)
+
+summary(glm_fumadores_A)
+summary(glm_fumadores_S)
+summary(glm_fumadores_AS)
+```
+
+A primera vista con los coeficientes se puede observar que se han introducido variables que añaden significación a los distintos modelos.
+
+El siguiente paso es evaluar los modelos:
+
+```{r}
+print(paste0("El AIC del modelo inicial es: ", AIC(glm_fumadores)))
+print(paste0("El AIC del modelo inicial + Age  es: ", AIC(glm_fumadores_A)))
+print(paste0("El AIC del modelo inicial + SportR es: ", AIC(glm_fumadores_S)))
+print(paste0("El AIC del modelo inicial + Age y SportR es: ", AIC(glm_fumadores_AS)))
+```
+
+podemos observar como las nuevas variables aportan valor y ayudan a exlicar mejor la variable dependiente, sobretodo SportR y como su conjunto con Age, es capaz de disminuir a menos de la mitad del valor del modelo inicial de AIC. Por ello seleccionamos el que incluye ambas como el mejor modelo.
+
+## 2.4. Calidad del ajuste
+
+*Calcular la matriz de confusión del mejor modelo del apartado 2.3 suponiendo un umbral de discriminación del 70 %. Observad cuantos falsos negativos hay e interpretar qué es un falso negativo en este contexto. Hacer lo mismo con los falsos positivos.*
+
+Dado que en el entrenamiento del modelo obtenemos los valores en fitted.values, podemos utilizar estos para generar el vector con los resultados utilizando un umbral del 70%.
+
+```{r}
+predictions <- glm_fumadores_AS$fitted.values
+predictions <- ifelse(predictions > 0.7, 1, 0)
+table(fumadores$smoker,predictions)
+```
+
+En este caso el modelo clasifica correctamente 167 de los 169 no fumadores y 127 fumadores de los 131. Dentro de la matriz de confusión podemos observar que nos encontramos con 2 falsos positivos, es decir, nos encontramos con dos personas que NO siendo fumadoras se han clasificado como fumadoras. Por otro lado, ocurre lo mismo con los falsos negativos, se han predecido 4 personas fumadoras como NO fumadoras. Ésta última parte nos puede indicar que somos más propensos a realizar errores tipo 2.
+
+## 2.5. La selección de los individuos fumadores
+
+*Establecer un nivel de probabilidad (umbral de discriminación) a partir del cual pensáis que el individuo tiene muchas posibilidades de ser un fumador, por ejemplo podéis escoger el 70 %. Comparar el nivel de probabilidad que da el modelo con el valor de capacidad pulmonar (PC) del individuo. Identificar los individuos que no se comportan según lo esperado, es decir tienen elevada capacidad pulmonar y el modelo los clasifica como fumadores y reportar los valores de probabilidad de ser fumador y de PC. Utilizar como umbral para declarar un individuo con PC elevado el cuartil tercero de la variable PC.*
+
+En este caso se va a definir una función para realizar el estudio gráfico según el umbral preferido (moverá la línea dentro del gráfico). En este caso se representan dos líneas, una indica el tercer cuartil de la variable (horizontal) y una segunda línea que muestra el umbral (vertical). Con ello se consiguen identificar las observaciones que cumplen esto en el recuadro superior derecho.
+
+```{r}
+
+plotSmokersThreshold <- function(probability, variable, threshold){
+  plot(probability, variable)
+  abline(h=quantile(variable)[4], col='blue')
+  abline(v=threshold, col='red')
+  ind <- (probability > threshold) & (variable > quantile(variable)[4])
+  print(paste0("Probability: ", probability[ind]))
+  print(paste0("Value: ", variable[ind]))
+}
+
+plotSmokersThreshold(glm_fumadores_AS$fitted.values, fumadores$PC, 0.7)
+plotSmokersThreshold(glm_fumadores_AS$fitted.values, fumadores$PC, 0.5)
+```
+
+En ambos se puede observar como para umbrales mayores de 50% solo se aprecia una sola observación que siga este patrón el cúal tiene una capacidad pulmonar mayor al 3.8 y una probabilidad de ser fumador mayor del 80%. En el caso de que disminuyeramos el umbral por debajo del 40% podriamos encontrar otra observación que cumpla con lo dicho.
+
+```{r}
+plotSmokersThreshold(glm_fumadores_AS$fitted.values, fumadores$PC, 0.3)
+```
+
+
+## 2.6. Curva ROC
+
+*Realizar el dibujo de la curva ROC para representar la calidad del modelo predictivo obtenido. Se puede usar la librería pROC y la instrucción rocy, finalmente, el plot del objeto resultante . Calcular AUROC usando también este paquete con la función auc() donde debéis pasar el nombre del objeto roc.*
+
+*Interpretar el resultado*
+
+```{r}
+glm_roc <- roc(fumadores$smoker,predictions)
+glm_roc
+```
+
+```{r}
+plot(glm_roc)
+```
+
+```{r}
+auc(glm_roc)
+```
+
+Podemos observar como le valor se encuentra muy cercano a uno, por lo que se puede asumir que se ha realizado un buen mocelo que es capaz de realizar una clasificación muy precisa (siendo 1 una clasificación perfecta y 0.5 aleatoria).
+
+Por otro lado, puede parecer un poco complicado interpretar un resultado donde la aleatoriedad es 0.5 y la perfección es 1, por ello se puede transformar al índice GINI el cual devuelve un valor representado entre 0 y 1 y puede ayudarnos a la compresión de la AUROC (en este caso al estar muy cercano a 1 es simple observar que se trata de un buen modelo)
+
+```{r}
+print(paste0("GINI: ",auc(glm_roc)*2 - 1))
+```
+
+# 3. Referencias
+
+* Recursos de la asignatura
+* [Coefficient of Determination](http://www.r-tutor.com/elementary-statistics/simple-linear-regression/coefficient-determination)
+* [How to perform a Logistic Regression in R](https://www.r-bloggers.com/how-to-perform-a-logistic-regression-in-r/)
+* [Type I and type II errors](https://en.wikipedia.org/wiki/Type_I_and_type_II_errors)
+* [abline R function](http://www.sthda.com/english/wiki/abline-r-function-an-easy-way-to-add-straight-lines-to-a-plot-using-r-software)
+* [R Markdown Cheat Sheet](https://www.rstudio.com/wp-content/uploads/2015/02/rmarkdown-cheatsheet.pdf)
