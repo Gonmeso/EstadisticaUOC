@@ -1,0 +1,20 @@
+---
+title: "Actividad 3: Analisis descriptivo e inferencial"
+author: "Gonzalo Mellizo-Soto Diaz"
+date: '`r format(Sys.Date(),"%e de %B, %Y")`'
+output:
+  html_document:
+    toc: yes
+  pdf_document:
+    toc: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r load_libraries, include=FALSE}
+
+```
+
+
