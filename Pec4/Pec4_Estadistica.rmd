@@ -1,0 +1,207 @@
+---
+title: 'Actividad 4: Análisis estadístico avanzado: Análisis de varianza y repaso del curso'
+author: "Gonzalo Mellizo-Soto"
+date: '`r format(Sys.Date(),"%e de %B %Y")`'
+output:  
+  html_document:
+    toc: TRUE
+  pdf_document:
+    toc: TRUE
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, include=FALSE}
+library(ggplot2)
+library(gridExtra)
+```
+
+# 1. Introducción
+
+Lo primero es cargar el fichero de datos para poder realizar el análisis descriptivo y las visualizaciones pertinentes:
+
+```{r}
+sat <- read.csv('sat02.csv')
+```
+
+
+# 2. Análisis descriptivo y visualización
+
+### Realizar un primer análisis descriptivo de los datos de la muestra.
+
+Para realizar este análisis se van a utilizar las funciones `str` y `summary` de r-base:
+
+```{r}
+str(sat)
+```
+
+Se puede observar como las clases de las variabkes se corresponden al tipo adecuado para las variables numéricas y categoricas, aún así la variable `EType` se va a transformar a factor. El dataset consta de 38 observaciones de 5 variables.
+
+```{r}
+sat$Etype <- as.factor(sat$Etype)
+summary(sat)
+```
+
+Por último vamos a hacer un repaso para ver si existe algún NA dentro del dataset
+```{r}
+sapply(sat, function(x) sum(is.na(x)))
+```
+
+Como se observa no existen NAs en ninguna variable del dataset.
+
+### Mostrar en un diagrama de caja la distribución de la satisfacción laboral de la muestra
+
+Se va a utilizar el paquete `ggplot2` para realizar la representación:
+
+```{r}
+ggplot(data = sat, aes(y=S)) +
+  geom_boxplot()+
+  theme_bw()
+```
+
+Como se puede observar en el gráfico la mediana se encuentra levemente por debajo de 5 y los datos se encuentran menos dispersos de la mediana al primer cuantil en comparación a la mediana con el tercero, la cual tiene una deispersión mayor de valores. Por otro lado, se puede observar como no existen outliers, dado que los valores se encuentran en las escala establecida (de 1 a 10).
+
+### Mostrar en varios diagramas de caja la distribución de la satisfacción laboral según el tipo de trabajo, según el nivel educativo y según el sexo, respectivamente. Interpretar los gráficos brevemente.
+
+```{r}
+ggplot(data=sat, aes(y=S))+
+  geom_boxplot(aes(x=Sex, fill=Sex))+
+  geom_boxplot(aes(x=Wtype, fill=Wtype))+
+  geom_boxplot(aes(x=Etype, fill=Etype))+
+  theme_bw()
+```
+
+En el gráfico anterior se han representado todos los diagramas de cajas en el mimsmo gráfico, para que así además de poder comprobar la relación de las categorias con la distribución, podemos observar si alguna de las variables mantienen relaciones parecidas con la variable dependiente.
+
+Para los niveles de estudios se observa que la mayor parte de los trabajadores con estudios están comprendidos en valores mayores a 5. Se puede observar también como en su mayoría las personas sin estudios tiene una satisfacción baja sin embargo, los valores que podemos encontrar a los trabajadores con estudios universitarios nos encontramos con una grán dispersión de los datos y una mediana menor a los grupos 2 y 3 (primaria y secundaria/profesional).
+
+En el caso del sexo las mujeres se encuentran con una distribución centrada en valores menores al cinco y muy dispersa para valores mayores a la mediana (valor cercano a 3). Por su parte los hombres se sienten más satisfechos en general con el trabajo.
+
+Por último, destaca la diferencia entre las distribuciones de los trabajos poco cualificados a los cualificados, siendo los últimos trabajos con un grada muy alto de satisfacción y muy concentrados en el límite superior, salvo por dos outliers que se observan claramente. Para los no cualificados se observan valores más dispersos pero mucho más bajos que en la otra categoría.
+
+# 3. Estadística Inferencial
+
+## 3.1. Intervalo de confianza del nivel de satisfacción laboral
+
+*Calcular el intervalo de confianza al 97 % de la satisfacción laboral de los trabajadores. A partir del valor obtenido, explique cómo se interpreta el resultado del intervalo de confianza.*
+
+```{r}
+intervalo <- 0.97
+s <- sd(sat$S)
+errorSd <- s/sqrt(length(sat$S))
+valorCritico <- (1-intervalo)/2
+tValue <- qt(c(valorCritico, 1-valorCritico), df = 37)
+margenError <- tValue * errorSd
+inicioIntervalo <- mean(sat$S) + margenError[1]
+finIntervalo <- mean(sat$S) + margenError[2]
+
+print(paste0("El intervalo de confianza es: [", inicioIntervalo, ',', finIntervalo, ']'))
+```
+
+## 3.2. Test de dos muestras: satisfacción laboral en función del tipo de trabajo
+
+*¿Hay diferencias significativas en la satisfacción laboral de los trabajadores que ocupan un puesto de trabajo cualificado y los que están en un lugar de trabajo poco cualificado?*
+
+*Calcularlo para un nivel de confianza del 90 % y 95 %.*
+
+### 3.2.1 Escribir la hipótesis nula y alternativa
+
+* La hipotesis nula  H0 es: "La satisfacción laboral de los trabajadores cualificados es igual a la satisfacción de de los trabajadores poco cualificados" mu(PQ) = mu(Q) 
+
+* La hipotesis alternativa (bilateral) es: "La satisfacción laboral de los trabajadores cualificados es distinta a la satisfacción de de los trabajadores poco cualificados" mu(Q) != mu(PQ) 
+
+### 3.2.2 Justificar qué método a aplicar
+
+Al tratarse de unas muestras de una cantidad mayor a 30 observaciones y menor de 80, se van a tratar como variables que siguen una distribucion t de Student, por lo tanto se va a aplicar un contraste de hipotesis y una valoracion del p valor sobre una variable de distribucion t de Student.
+
+### 3.2.3. Calcular el estadistico de contraste, el valor critico y el valor p.
+
+El estadistico de contraste es el siguiente: (x1 - x2) / (S1-2)
+
+```{r}
+# Para intervalo de confianza del 90%
+x1 <-  mean(sat[sat$Wtype == "Q",]$S)
+x2 <- mean(sat[sat$Wtype == "PQ",]$S)
+sigma1 <- sd(sat[sat$Wtype == "Q",]$S)
+sigma2 <- sd(sat[sat$Wtype == "PQ",]$S)
+n1<- nrow(sat[sat$Wtype == "Q",])
+n2<- nrow(sat[sat$Wtype == "PQ",])
+
+s1_2 = sqrt((sigma1^2 / n1) + (sigma2^2 / n2))
+
+t <- (x1 - x2) / (s1_2)
+print(paste("El estadistico del contraste es: ", t))
+valCritico <- qt(p = c(0.90, 0.10), df = 37)
+print(paste("El valor critico es: ", valCritico))
+p_value <-   2*(pt(q = t, df =  30, lower.tail = FALSE))
+print(paste("El p-valor es: ", p_value))
+```
+
+```{r}
+# Para el intervalo de confianza de 0.95
+t <- (x1 - x2) / (s1_2)
+print(paste("El estadistico del contraste es: ", t))
+valCritico <- qt(p = c(0.95, 0.05), df = 37)
+print(paste("El valor critico es: ", valCritico))
+p_value <-   2*(pt(q = t, df = 30, lower.tail = FALSE))
+print(paste("El p-valor es: ", p_value))
+```
+
+### 3.2.4. Interpretar el resultado y dar respuesta a la pregunta planteada
+
+Como se puede observar para ambas, el estadístico se encuentra fuera del intervalo del valor crítico para ambos casos y coincide con que el p-valor es menor del 5% por lo que se rechaza la hipótesis nula. Tal y como se ha observado en los gráficos anteriores existe una diferencia muy amplia entre ambos.
+
+
+## 3.3 Test de dos muestras: satisfacción laboral en función del sexo
+
+*¿Se puede afirmar que las mujeres tienen una satisfacción laboral inferior a la de los hombres? Calcularlo para un nivel de confianza del 90 % y 95 %.*
+
+### 3.3.1 Escribir la hipótesis nula y alternativa
+
+* La hipotesis nula  H0 es: "La satisfacción laboral de los trabajadores es igual a la satisfacción de las trabajadoras " mu(M) = mu(F) 
+
+* La hipotesis alternativa (bilateral) es: "La satisfacción laboral de los trabajadores es distinta a la satisfacción de las trabajadoras" mu(M) != mu(F) 
+
+### 3.3.2 Justificar qué método a aplicar
+
+Al tratarse de unas muestras de una cantidad mayor a 30 observaciones y menor de 80, se van a tratar como variables que siguen una distribucion t de Student, por lo tanto se va a aplicar un contraste de hipotesis y una valoracion del p valor sobre una variable de distribucion t de Student.
+
+### 3.3.3. Calcular el estadistico de contraste, el valor critico y el valor p.
+
+El estadistico de contraste es el siguiente: (x1 - x2) / (S1-2)
+
+```{r}
+# Para intervalo de confianza del 90%
+x1 <-  mean(sat[sat$Sex == "M",]$S)
+x2 <- mean(sat[sat$Sex == "F",]$S)
+sigma1 <- sd(sat[sat$Sex == "M",]$S)
+sigma2 <- sd(sat[sat$Sex == "F",]$S)
+n1<- nrow(sat[sat$Sex == "M",])
+n2<- nrow(sat[sat$Sex == "F",])
+
+s1_2 = sqrt((sigma1^2 / n1) + (sigma2^2 / n2))
+
+t <- (x1 - x2) / (s1_2)
+print(paste("El estadistico del contraste es: ", t))
+valCritico <- qt(p = c(0.90, 0.10), df = 37)
+print(paste("El valor critico es: ", valCritico))
+p_value <-   2*(pt(q = t, df =  30, lower.tail = FALSE))
+print(paste("El p-valor es: ", p_value))
+```
+
+```{r}
+# Para el intervalo de confianza de 0.95
+t <- (x1 - x2) / (s1_2)
+print(paste("El estadistico del contraste es: ", t))
+valCritico <- qt(p = c(0.95, 0.05), df = 30)
+print(paste("El valor critico es: ", valCritico))
+p_value <-   2*(pt(q = t, df = 30, lower.tail = FALSE))
+print(paste("El p-valor es: ", p_value))
+```
+
+### 3.3.4. Interpretar el resultado y dar respuesta a la pregunta planteada
+
+En este caso, dependiendo del nivel de confianza podemos rechazar o no la hipótesis nula. En caso del nivel al 90% no se cumple que el p-valor > 0.1, por lo que se rechaza la hipótesis nula de que la satisfacción media es igual entre hombres y mujeres. Por el otro lado, se cumple que el p-valor es mayor a 0.05 por lo que no se rechaza la hipótesis.
+
