@@ -205,3 +205,123 @@ print(paste("El p-valor es: ", p_value))
 
 En este caso, dependiendo del nivel de confianza podemos rechazar o no la hipótesis nula. En caso del nivel al 90% no se cumple que el p-valor > 0.1, por lo que se rechaza la hipótesis nula de que la satisfacción media es igual entre hombres y mujeres. Por el otro lado, se cumple que el p-valor es mayor a 0.05 por lo que no se rechaza la hipótesis.
 
+# 4. Regresión
+
+## 4.1 Modelo de regresión
+
+*Aplicar un modelo de regresión lineal múltiple que use como variables explicativas el número de horas, el sexo, el nivel de educación y el tipo de trabajo y como variable dependiente la satisfacción laboral. Especificar en el nivel base (en el relevel): para la variable sexo, la categoría ‘F’, por la variable educación, la categoría ‘1’, y por la variable tipo de trabajo, la categoría ‘PQ’*
+
+Procedamos a realizar la regresión lineal a las variables seleccionadas:
+
+```{r}
+sat$Sex <- relevel(sat$Sex,  ref = 'F')
+sat$Etype <- relevel(sat$Etype,  ref = '1')
+sat$Wtype <- relevel(sat$Wtype,  ref = 'PQ')
+sat_lm <- lm(S ~ H + Sex + Etype + Wtype, data = sat)
+summary(sat_lm)
+```
+
+## 4.2 Interpretación
+
+*Interpretar el modelo de regresión resultante, indicando cuáles regresores son significativos. Explicar si existen diferencias significativas debidas al sexo y si están, en qué sentido. Repetir para el resto de variables*
+
+En este caso no se aprecia que el sexo se trate de un regresor significativo, pero si que favorece aunque en menor medida que ciertas variables en la felicidad (un poco mas significativa para los hombres con respecto a las mujeres). Por otro lado, podemos observar ciertas variables más significativas para la relación a la satisfacción, concretamente el tipo de trabajo, que tal y como se ha observado en los gráficos un trabajo cualificado repercute más y por tanto se muestra como un regresor significativo en la regresión lineal. En menor medida lo observamos en "Etype2" que como se ha mostrado existe un salto significativo entre la clase 1 y la clase 2.
+
+## 4.3 Predicción
+
+*Aplicar el modelo de regresión para predecir la satisfacción laboral de un hombre, que trabaja 40h semanales (h/s), de nivel de estudios universitarios y con un trabajo cualificado. Comparar el resultado con el de un hombre, que trabaja 40 h/s, de nivel de estudios universitarios, y trabajo poco cualificado.*
+
+```{r}
+print(paste0("La satisfacción estimada es: ",predict(sat_lm, data.frame(H = 40, Etype = '4', Wtype = "Q", Sex = "M"))))
+print(paste0("La satisfacción estimada es: ",predict(sat_lm, data.frame(H = 40, Etype = '4', Wtype = "PQ", Sex = "M"))))
+```
+
+
+## 4.4 Interpretación de la predicción
+
+*Interpretar los resultados obtenidos en el apartado anterior. Concretamente, comentar los aspectos siguientes:*
+
+* *¿Consideras que el modelo será preciso, teniendo en cuenta los valores de R2 y p − value obtenidos?*
+
+* *¿Cómo se puede interpretar la diferencia de satisfacción laboral entre los dos individuos, a partir de los coeficientes del modelo de regresión?*
+
+Considerando el valor de R2 (0.596) y el p-valor (4.416e-05) no podemos considerar que el modelo explique bien, dado que el valor de R2 nos indica que no se ajusta demasiado a los valores, mientras que el p-valor tiene un valor muy cercano a cero, lo que indica una mayor significación del modelo, por lo tanto no se puede concluir a ciencia cierta que el modelo tenga una gran precisión.
+
+La diferencia se puede interpretar reemplazando los datos de los individuos utilizando los coeficientes y se puede observar que producto es que tiene mayor peso. En este caso, se puede observar como al tener un trabajo cualificado la felicidad aumenta en el coeficiente WtypeQ, el cual sumaría 3.78 con respecto al no cualificado, tal y como se puede observar en la predicción.
+
+## 4.5 Intervalos de predicción
+
+*Calcular los intervalos de predicción de los dos individuos al 95 %. Para hacerlo, puedes añadir a la función predict() el argumento intervalo = "prediction". Para especificar el nivel de confianza puede usar el argumento level (por defecto es 0.95). Interprete los resultados*
+
+```{r}
+print(
+             predict(sat_lm,
+                     data.frame(H = 40, Etype = '4',
+                                Wtype = "Q", Sex = "M"),
+                     interval = "predict", level = 0.95))
+print(
+             predict(sat_lm,
+                     data.frame(H = 40, Etype = '4',
+                                Wtype = "PQ", Sex = "M"),
+                     interval = "predict", level = 0.95))
+```
+
+En este caso el intervalo de predicción devuelto para ambos, difieren en gran medida y se trata de un intervalo de una gran amplitud entre el valor mínimo y el máximo (casi 10 puntos).
+
+## 4.6 Ajuste del modelo
+
+*Analizar la adecuación del modelo a partir del análisis gráfico de residuos. Para esto, puede utilizar la instrucción plot() pasando como argumento el modelo de regresión lineal. Para saber cómo interpretar los gráficos de residuos, consulte el enlace siguiente: http://data.library.virginia.edu/diagnostic-plots/*
+
+```{r}
+plot(sat_lm)
+```
+
+Viendo la primera gráfica podemos observar si existen relaciones no lineales entre los puntos predecidos y los reales, de modo que en este gráfico no se aprecia que existan relaciones no lineales.
+
+Para el gráfico QQ se muestra si los datos residuales están distribuidos normalmente y en este caso se aprecia como los valores se ajustan en cierta medida a la recta, por lo que se puede asumir que guardan cierta normalidad.
+
+Se muestra si los residuales se encuentran repartidos uniformemente con los rangos de los predictores, por lo que a más horizontal la recta mayor uniforme y como se aprecia en este caso se trata de una parábola lo que nos indica que los residuales se encuentran más dispersos para valores entre 4 y 8 de los valores predecidos.
+
+En este caso, el gráfico nos ayuda a identificar valores átipicos que puedan influir fuertemente en el modelo, por ello se representan los puntos y su distancio de Cook, por ello deberiamos de identificar si existen puntos en el extremo derecho que realizan esto, aunque la distancia es grande para todos los puntos (mayor a 0.10) ninguno se encuentra separado en extremo del resto, por lo que la mayoría de puntos tienden a influenciar de manera similar.
+
+# 5.Análisis de varianza unifactorial
+
+*A continuación, nos preguntamos si el nivel de satisfacción laboral está influido por el nivel de estudios. Dado que esta variable tiene cuatro niveles, se aplicará análisis de varianza.*
+
+## 5.1 Hipótesis nula y alternativa
+
+* H0: las submuestras por nivel de estudios son iguales, u1 = u2 = u3 = u4
+* H1: las submuestras por nivel de estudios son distintas
+
+## 5.2 Modelo
+
+*Calcular el análisis de varianza, usando la función aov(). Interpretar el resultado del análisis, teniendo en cuenta los valores Sum Sq, Mean SQ, F y Pr (> F)*
+```{r}
+tapply(sat$S, sat$Etype, mean)
+```
+
+```{r}
+aov_fit = lm(S ~ Etype, sat)
+anova(aov_fit)
+```
+
+Para este caso nos podemos fijar en como el p-valor es menor de grado de significación del 0.05 por lo que puede concluir con que existen diferencias según los grupos de estudios.
+
+# 5.3 Cálculos
+
+*Con el fin de profundizar en la comprensión del modelo ANOVA, calcular manualmente la suma de cuadrados intra y la suma de cuadrados entre grupos. Los resultados deben coincidir con el resultado del modelo ANOVA. Como referencia, puedes obtener las fórmulas de López-Roldán y Fachelli (2015), páginas 29-33.*
+
+```{r}
+aov.info = function(x){
+  return( data.frame(n = length(x), meanVal = mean(x), sdVal = sd(x)))
+}
+
+print(aov.info(as.numeric(sat$S)))
+data <- tapply(sat$S, sat$Etype, aov.info)
+print(data)
+```
+```{r}
+SCD <- sum(sapply(data))
+```
+
+
