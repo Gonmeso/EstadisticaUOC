@@ -321,7 +321,69 @@ data <- tapply(sat$S, sat$Etype, aov.info)
 print(data)
 ```
 ```{r}
-SCD <- sum(sapply(data))
+meansofgroups <- function(groupsname){ # function to calculate means of groups
+  
+  mog <- mean(groupsname, na.rm = TRUE)
+  return(mog)
+}
+
+total_mean <- sum(sat$S)/nrow(sat)
+
+means_of_groups <- c(data$`1`$meanVal, data$`2`$meanVal, data$`3`$meanVal ,data$`4`$meanVal)
+ss <- function(ss_data, group_mean){  #function to calculate sum of squares
+  w <- 0
+  for(i in seq_along(ss_data)) {
+    w[i] <- ss_data[i] - group_mean 
+  }
+  return(w^2) 
+}
+
+ss_within <- sum(ss(sat$S[sat$Etype == '1'], means_of_groups[1]), ss(sat$S[sat$Etype == '2'],means_of_groups[2]), ss(sat$S[sat$Etype == '3'], means_of_groups[3]),ss(sat$S[sat$Etype == '4'], means_of_groups[4]), na.rm = TRUE)
+changetomean <- function(changetomean_data, means_groups){ # function to change all obs to means of corresponding groups
+  changetomean_data[which(changetomean_data != 0)] <- means_groups
+  return(changetomean_data[which(changetomean_data != 0)])
+}
+
+ss_between <- sum(ss(changetomean(sat$S[sat$Etype == '1'], means_of_groups[1]), total_mean),
+                  ss(changetomean(sat$S[sat$Etype == '2'], means_of_groups[2]), total_mean),
+                  ss(changetomean(sat$S[sat$Etype == '3'], means_of_groups[3]), total_mean),
+                  ss(changetomean(sat$S[sat$Etype == '4'], means_of_groups[4]), total_mean))
+print(paste0("SSD_I: ", ss_within))
+print(paste0("SSD_E: ", ss_between))
 ```
 
 
+# 6. Adecuación del modelo
+
+*Validar la adecuación del modelo ANOVA. Puedes consultar López-Roldán y Fachelli (2015), gráfico III.8.6, página 25*
+
+## 6.1 Visualización de la adecuación del modelo
+
+*Mostrar visualmente la adecuación del modelo ANOVA. Puedes usar plot sobre el modelo ANOVA resultante. En los apartados siguientes se pide la interpretación de estos gráficos*
+
+```{r}
+plot(aov_fit)
+```
+
+## 6.2. Normalidad de los residuos
+
+*Interpretar la normalidad de los residuos a partir del gráfico Normal Q-Q que se muestra en el apartado anterior*
+
+En este caso paar considerar como normal la variable, los puntos deberian de estar lo mas cercano posible a la línea. en este caso podemos observar como en ciertas partes se encuentran picos e incluso similitud entre los puntos (x=1, y=1). Por ello, la distribución mostrara ciertos picos o sesgos en los extremos, aún así se adpata bastante a la línea por lo que podría considerarse normal.
+
+
+## 6.3. Homoscedasticidad los residuos
+
+*Los gráficos “Residuales vs Fitted”, “Scale-Location” y “Residuales vs Factor levels” dan información sobre la homocedasticidad de los residuos. Interpretar estos gráficos.*
+
+*Puedes consultar información complementaria sobre cómo interpretar estos gráficos en los siguientes enlaces:*
+
+* https://support.minitab.com/en-us/minitab-express/1/help-and-how-to/modeling-statistics/anova/how-to/one-way-anova/interpret-the-results/all-statistics-and-graphs/#normal-probability-plot-of-the-residuals
+* https://support.minitab.com/en-us/minitab-express/1/help-and-how-to/modeling-statistics/anova/how-to/two-way-anova/interpret-the-results/all-statistics-and-graphs/
+
+
+* Residuals vs Fitted: En este caso nos podemos encontrar como los puntos no siguen un patrón similar y distribuciones dispares entre ellas, además ciertos puntos aparecen en los extremos por lo que podemos considerarlos como puntos dispares e influyentes. En este caso, se consideraría que se trata de una varianza NO constante
+
+* Scale-Location: en este caso, se puede observar como puede encontrarse un patrón creciente, a pesar de la cantidad de puntos, se observa la tendencia en el gráfico
+
+* Residuales vs Factor levels: se puede observar como la apmlitud aumenta según la distancia y tampoco muestra casos estremos
