@@ -5,8 +5,6 @@ date: '`r format(Sys.Date(),"%e de %B %Y")`'
 output:  
   html_document:
     toc: TRUE
-  pdf_document:
-    toc: TRUE
 ---
 
 ```{r setup, include=FALSE}
@@ -16,6 +14,8 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r, include=FALSE}
 library(ggplot2)
 library(gridExtra)
+library(dplyr)
+library(agricolae)
 ```
 
 # 1. Introducción
@@ -386,4 +386,171 @@ En este caso paar considerar como normal la variable, los puntos deberian de est
 
 * Scale-Location: en este caso, se puede observar como puede encontrarse un patrón creciente, a pesar de la cantidad de puntos, se observa la tendencia en el gráfico
 
-* Residuales vs Factor levels: se puede observar como la apmlitud aumenta según la distancia y tampoco muestra casos estremos
+* Residuales vs Factor levels: se puede observar como la apmlitud aumenta según la distancia y tampoco muestra casos extremos en cuanto a la distancia
+
+Por lo tanto, podría suponerse que existen diferencias en las varianzas.
+
+## 6.4. ANOVA no paramétrico
+
+### 6.4.1. Kruskal-Wallis
+
+*Si las condiciones de aplicación de ANOVA no se cumplen, entonces se suele aplicar un test no paramétrico. El test Kruskal-Wallis es el equivalente no paramétrico de ANOVA. Aplicar el test usando la función kruskal.test() e interpretar el resultado.*
+
+*Puedes consultar el siguiente enlace:*
+
+https://www.sheffield.ac.uk/polopoly_fs/1.714570!/file/stcp-karadimitriou-KW.pdf
+
+
+```{r}
+kruskal.test(sat$S,sat$Etype)
+```
+
+
+Se observa como el valor se encuentra por encima del nivel de significación 5% por lo que no se puede considerar que existan diferencias significativas en las varianzas
+
+
+
+
+### 6.4.2. Interpretación
+
+*Explicar en qué se diferencia el cálculo de ANOVA del cálculo del test de Kruskal-Wallis. Si el test de Kruskal-Wallis no tiene las mismas restricciones de aplicación que el test ANOVA, ¿por qué crees que se continúa aplicando ANOVA, si las condiciones de satisfacción lo permiten, en lugar de Kruskal-Wallis?*
+
+Ambos métodos se diferencia en que ANOVA es un método paramétrico y debe de cumplir ciertas condiciantes para poder aplicarlo, mientras que Kruskal-Wallis se trata de un método no-paramétrico que puede aplicarse a variables con distribuciones no gaussianas. En este caso, los test paramétricos permiten analizar mejor el test en cuestión, por eso se tiende a utilizar test paramétricos frente a los no paramétricos, dado que en ciertos casos los p-valores pueden diferir notablemente.
+
+```{r}
+tapply(sat$S, sat$Etype, shapiro.test)
+```
+
+El test sugiere que no todos los grupos en la variable son normales, lo que concordaría con utilizar el test no paramétrico de Kruskal-Wallis.
+
+
+# 7. ANOVA multifactorial
+
+*A continuación, se quiere evaluar el efecto de la calificación del trabajo combinado con otro factor. Primero se realizará el análisis con el factor nivel de estudios y posteriormente, con el factor sexo.*
+
+## 7.1. Factores: tipo de trabajo y nivel educativo
+
+### 7.1.1. Análisis visual de los efectos principales y posibles interacciones
+
+*Dibujar en un gráfico la satisfacción laboral en función del tipo de trabajo y en función del nivel educativo. El gráfico debe permitir evaluar si hay interacción entre los dos factores. Por ello, se recomienda que siga los pasos:*
+
+1. *Agrupar el conjunto de datos por tipo de trabajo y por nivel de estudios. Calcular la media de satisfacción laboral para cada grupo. Para realizar este proceso, se puede hacer con las funciones group_by() y summarise() de la librería dplyr.*
+
+```{r}
+grouped_sat <- sat %>% 
+  group_by(Wtype, Etype) %>%
+  summarise(mean = mean(S))
+
+grouped_sat
+```
+
+
+2. *Mostrar el conjunto de datos en forma de tabla, donde se muestre la media de cada grupo según el tipo de trabajo y el nivel de estudios.*
+
+```{r}
+head(inner_join(sat, grouped_sat, by = c("Wtype", "Etype")) %>% select(Wtype, Etype, mean))
+```
+
+
+3. *Mostrar en un gráfico el valor promedio de la variable S para cada tipo de trabajo y educación. Puede inspirar en los gráficos de López-Roldán y Fachelli (2015), p.38. Puede realizar este tipo de gráfico usando la función ggplot de la librería ggplot2.*
+
+```{r}
+  ggplot(grouped_sat, aes(x=Etype, y=mean, group=Wtype, color = Wtype))+
+  geom_line()+
+  geom_point()
+```
+
+
+4. *Interpretar el resultado sobre si sólo existen efectos principales o hay interacción entre los factores. Si hay interacción, explicar como se observa esta interacción en el gráfico.*
+
+Se puede obervar como la media depende completamente del tipo de trabajo, mostrando una gran diferencia entre las medias de trabajos cualificados y no cualificados, por lo tanto existe una interacción entre ellos que desvia las medias de cada grupo.
+
+### 7.1.2. ANOVA multifactorial
+
+*A continuación, realizar el análisis ANOVA usando los factores y en su caso, la interacción entre los mismos. Interpretar el resultado del modelo y explicar si los factores (y la interacción entre factores) son significativos para modelar la satisfacción laboral.*
+
+```{r}
+aov_m_fit <- aov(S ~ Wtype * Etype, data = sat)
+summary.aov(aov_m_fit)
+```
+
+
+En este caso se nos muestra que el tipo de trabajo es muy significativo y que existen diferencias notables entre las varianzas según el tipo de trabajo. La interacción también es significativa, siendo la educación la menor de todas y aún así importante.
+
+### 7.1.3. Adecuación del modelo
+
+*Interpretar la adecuación del modelo ANOVA obtenido usando los gráficos de residuos*
+
+```{r}
+plot(aov_m_fit)
+```
+
+
+En el primer gráfico nos encontramos con que no se puede identificar ningún patrón a simple vista y los puntos se encuentran esparcidos a lo largo de la gráfica, por lo que podriamos supoer que no existe una varianza constante. En el segundo, podemos identificar que en cierta medida sigue una distribución normal salvo en el inicio, por lo que se podría considerar normal con algún sesgo.
+
+En el tercero, se puede observar un pico pero no un patrón como tal, lo que puede indicar que deberiamos de investigar porque se produce un pico, pero no podemos deducir que se trate de variables de varianza constante o no. Por último, nos encontramos con que no se encuentran patrones y los puntos se encuentran a lo largo de la gráfica con distancias similares.
+
+En definitiva, se puede intuir que no existe una varianza constante entre los distintos grupos.
+
+## 7.2. Factores: tipo de trabajo y sexo
+
+### 7.2.1. Análisis visual de los efectos principales y posibles interacciones
+
+*Realizar el análisis visual de los factores tipo de trabajo y sexo, de forma análoga al caso anterior. Interpretar el resultado del gráfico en relación a los efectos principales y posibles interacciones.*
+
+```{r}
+grouped_sat1 <- sat %>% 
+  group_by(Wtype, Sex) %>%
+  summarise(mean = mean(S))
+
+grouped_sat1
+```
+```{r}
+head(inner_join(sat, grouped_sat1, by = c("Wtype", "Sex")) %>% select(Wtype, Sex, mean))
+```
+```{r}
+  ggplot(grouped_sat1, aes(x=Wtype, y=mean, group=Sex, color = Sex))+
+  geom_line()+
+  geom_point()
+```
+
+Para este caso se observa una tendencia según el tipo de trabajo, dado que aumenta la media de la satisfacción para cada grupo, con una pequeña diferencia con el tipo de sexo.
+
+
+### 7.2.2. ANOVA multifactorial
+
+*Realizar el análisis ANOVA con los factores tipo de trabajo, sexo e interacción, en su caso. Interpretar el resultado*
+
+```{r}
+aov_m_fit1 <- aov(S ~ Wtype * Sex, data = sat)
+summary.aov(aov_m_fit1)
+plot(aov_m_fit1)
+```
+
+En este caso la interacción y la variable Sex contienen un p-valor mayor al nivel de significación por lo que se considera que existe una similitud de varianzas, mientras que para el tipo de trabajo sigue marcando una gran diferencia entre las varianzas y un alto grado de significación.
+
+
+# 8. Comparaciones múltiples
+
+*Tomando como referencia el modelo ANOVA multifactorial, con los factores tipo de trabajo y nivel de estudios, aplicar el test de comparación múltiple Scheffé. Interpretar el resultado del test e indicar qué grupos son diferentes significativamente entre sí.*
+
+```{r}
+stest <- scheffe.test(aov_m_fit, "S", group=TRUE,console=FALSE)
+stest$statistics
+```
+
+
+# 9. Conclusiones
+
+*Escribir las conclusiones finales del estudio en relación a los objetivos de la investigación.*
+
+En este caso podemos observar lo siguiente:
+
+* Una de las variables que más afecta a la satisfacción es el tipo de trabajo, mostrando una clara diferencia entre el trabajo cualificado y no cualificado
+
+* El tipo de trabajo es de gran importancia a lo hora de realizar la regresion lineal sobre la variable dependiente
+
+* Existen diferencias de varianza entre los grupos según del tipo de trabajo
+
+* Debido al poco número de observaciones por grupo, no se ha podido considerar que sigue una distribución normal y los análisis la mayoría de los grupos rechazaban la normalidad seún la satisfacción
+
